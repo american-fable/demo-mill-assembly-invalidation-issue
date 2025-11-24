@@ -17,7 +17,7 @@ time (./mill app.persistentAssembly && cat out/mill-invalidation-tree.json)
 
 On first run output will looks like this:
 
-``` json
+```
 
 [162/162] ============================== app.persistentAssembly ============================== 17s
 {
@@ -39,7 +39,7 @@ sys     0m0.269s
 
 On second call it should looks like this: 
 
-``` json
+```
 [162/162] ============================== app.persistentAssembly ==============================
 {}
 real    0m0.241s
@@ -52,7 +52,7 @@ Now change the log line in app.assembly/assembly build.mill and run the
 command again. When the task is called assembly (and assemblyFe calls it), many things are rebuilt, including scalablytyped. If you rename 'assembly' to 'assemblyX' and assemblyFe calls it, the whole thing will take much less time because is not invalidation of `worker.fastLinkJS`. 
 Expected output in second case should looks like this:
 
-``` json
+```
 [162/162] ============================== app.persistentAssembly ============================== 2s
 {
   "mill.javalib.JvmWorkerModule.internalWorker": {},
