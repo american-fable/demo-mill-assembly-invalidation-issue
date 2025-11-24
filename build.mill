@@ -1,0 +1,76 @@
+//| mill-version: 1.0.6-jvm
+//| mvnDeps:
+//| - com.github.lolgab::mill-scalablytyped::0.4.0
+
+import mill.*
+import mill.scalalib.*
+import mill.scalajslib.*
+import mill.scalajslib.api.{ESFeatures, ESVersion, ModuleKind}
+import mill.api.BuildCtx
+import com.github.lolgab.mill.scalablytyped._
+
+trait BaseScalaJSModule extends ScalaJSModule {
+  def scalaVersion = "3.7.3"
+  def scalaJSVersion = "1.20.1"
+}
+
+
+object worker extends BaseScalaJSModule {
+   override def moduleDeps = Seq(scalablyTyped)
+
+   object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
+    override def scalablyTypedBasePath = app.npmInstallPath // it expecting that all npm files already there
+    override def scalablyTypedPackageJson = Task.Source(app.npmInstallPath / "package.json")
+    override def scalablyTypedFlavour = Flavour.Slinky
+  }
+}
+
+object app extends BaseScalaJSModule {
+    override def mvnDeps = Seq(
+      mvn"org.scala-lang:scala3-library_3:${scalaVersion()}".forceVersion(), // to address https://github.com/scala/scala3/issues/22890
+      mvn"me.shadaj::slinky-core::0.7.5",
+      mvn"me.shadaj::slinky-web::0.7.5"
+    )
+
+    // hardcoded path where all npm files should be installed for ScalablyTyped compilation
+    val npmInstallPath = BuildCtx.workspaceRoot / "out" / "app" / "npmInstallDest"
+
+    def npmInstall() = Task.Command{
+      os.makeDir.all(npmInstallPath)
+      Seq("package.json", "package-lock.json")
+        .map(last => moduleDir / last )
+        .foreach(src => os.copy(src, npmInstallPath / src.last, replaceExisting = true))
+
+      os.proc("npm", "install", "--prefix", npmInstallPath)
+        .call(cwd = npmInstallPath, env = Map("NODE_ENV" -> "development"))
+    }  
+
+    def assemblyFe = Task {
+      assembly() // rename according to README 
+    }
+
+    def assembly = Task { // rename according to README
+      Task.log.info("test log line") // change me to invaldiate
+      val scalaJsOutput = worker.fastLinkJS()
+      os.copy(scalaJsOutput.dest.path / "main.js", Task.dest / "main.js")
+
+      // for some reason this critical to reproduce the issue, in particilar
+      // 'npmInstallPath' usage.
+      BuildCtx.withFilesystemCheckerDisabled {
+        os.list(npmInstallPath)
+      }
+
+      PathRef(Task.dest)
+    }
+
+    def persistentAssembly = Task(persistent = true) {
+      assemblyFe()
+    }
+
+
+    object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
+      override def scalablyTypedBasePath = npmInstallPath // it expecting that all npm files already there
+      override def scalablyTypedPackageJson = Task.Source(npmInstallPath / "package.json")
+      override def scalablyTypedFlavour = Flavour.Slinky
+    }
+}
