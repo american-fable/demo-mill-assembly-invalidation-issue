@@ -48,7 +48,7 @@ sys     0m0.057s
 
 ```
 
-Now change the log line in app.assembly/assembly build.mill and run the
+Now change the log line in app.assembly/assembly in build.mill and run the
 command again. When the task is called assembly (and assemblyFe calls it), many things are rebuilt, including scalablytyped. If you rename 'assembly' to 'assemblyX' and assemblyFe calls it, the whole thing will take much less time because is not invalidation of `worker.fastLinkJS`. 
 Expected output in second case should looks like this:
 
