@@ -12,8 +12,16 @@ import com.github.lolgab.mill.scalablytyped._
 trait BaseScalaJSModule extends ScalaJSModule {
   def scalaVersion = "3.7.3"
   def scalaJSVersion = "1.20.1"
-}
 
+  /*
+   * Currently Mill ScalaJSModule has `fastLinkJS` and `fullLinkJS` without any parapmeters
+   * See: https://github.com/com-lihaoyi/mill/blob/ef68019c7bfa5213e2bbb62a06868de35583d745/libs/scalajslib/src/mill/scalajslib/ScalaJSModule.scala#L111
+   * But if something like this could be possibble then is no need for complex conditional execution:
+   **/
+  // override def linkJSTask(isFullLinkJS: Boolean = false) {
+  //   super.linkJSTask(isFullLinkJS = isFullLinkJS)()
+  // }
+}
 
 object worker extends BaseScalaJSModule {
    override def moduleDeps = Seq(scalablyTyped)
@@ -22,6 +30,18 @@ object worker extends BaseScalaJSModule {
     override def scalablyTypedBasePath = app.npmInstallPath // it expecting that all npm files already there
     override def scalablyTypedPackageJson = Task.Source(app.npmInstallPath / "package.json")
     override def scalablyTypedFlavour = Flavour.Slinky
+  }
+}
+
+object dev extends Module {
+  def build = Task {
+    (
+      app.assembly(),
+    )
+  }
+  def allHmr = Task {
+    app.readEnvs() // Required to ensure that docker restarts containers when .env changes
+    build()
   }
 }
 
@@ -43,29 +63,89 @@ object app extends BaseScalaJSModule {
 
       os.proc("npm", "install", "--prefix", npmInstallPath)
         .call(cwd = npmInstallPath, env = Map("NODE_ENV" -> "development"))
-    }  
-
-    def assemblyFe = Task {
-      assembly() // rename according to README 
     }
 
-    def assembly = Task { // rename according to README
-      Task.log.info("test log line") // change me to invaldiate
-      val scalaJsOutput = worker.fastLinkJS()
-      os.copy(scalaJsOutput.dest.path / "main.js", Task.dest / "main.js")
+    def staticFiles = Task.Sources(Seq(
+      ".env",
+      "index.html",
+      "index.css",
+      ".postcssrc.json",
+    ).map(last => app.moduleDir / last)*)
 
-      // for some reason this critical to reproduce the issue, in particilar
-      // 'npmInstallPath' usage.
+    def assembly = Task {
+      val build = Task.dest / "build"
+      // Task.env reads from the environment where the user called mill. But by default, mill uses the environment of the
+      // worker process, which was picked up when the worker started. Thus, we have to pass NODE_ENV through to anything
+      // that users it
+      val envs = readEnvs()
+      // noinspection MapGetGet
+      def optimized() = envs.get("OPTIMIZE_JS").get == "true"
+
+      os.makeDir(build)
+      staticFiles().foreach { src => os.copy(src.path, build / src.path.last) }
+
       BuildCtx.withFilesystemCheckerDisabled {
-        os.list(npmInstallPath)
+        // 'npmInstallPath' should be already populated via './mill common.client.npmInstall'
+        os.list(npmInstallPath).map(PathRef(_)).foreach { src =>
+          if src.path.last == "node_modules" then os.symlink(build / src.path.last, src.path.relativeTo(build))
+          else os.copy(src.path, build / src.path.last)
+        }
       }
+
+      val scalaJsOutput = if optimized() then fullLinkJS() else fastLinkJS() // EXECUTED TWICE
+      os.copy(scalaJsOutput.dest.path / "main.js", build / "main.js")
+      // ScalaJs generates source maps with absolute paths, which doesn't work well with other tools
+      os.write(
+        build / "main.js.map",
+        os.read(scalaJsOutput.dest.path / "main.js.map").replace("file://" + Task.ctx().workspace, "../../../..")
+      )
+
+      // The js file has the name of the source map in it, so don't try to rename the js and js.map files when copying
+      // them
+      val workerJsOutput = if optimized() then worker.fullLinkJS() else worker.fastLinkJS()  // EXECUTED TWICE
+      os.copy(workerJsOutput.dest.path / "main.js", build / "worker" / "main.js", createFolders = true)
+      os.write(
+        build / "worker" / "main.js.map",
+        os.read(workerJsOutput.dest.path / "main.js.map").replace("file://" + Task.ctx().workspace, "../../../../..")
+      )
+
+      os.proc(Seq(
+        "npx",
+        "parcel",
+        "build",
+        if optimized() then "" else "--no-optimize",
+        "--no-autoinstall",
+        "--dist-dir=..",
+        "index.html"
+      ).filter(_.nonEmpty)).call(
+        cwd = build,
+        env = Map("NODE_ENV" -> envs("NODE_ENV")),
+      )
+      os.remove.all(build)
 
       PathRef(Task.dest)
     }
 
     def persistentAssembly = Task(persistent = true) {
-      assemblyFe()
+      assembly()
     }
+
+    def readEnvs: Task.Simple[Map[String, String]] = Task {
+      import scala.jdk.CollectionConverters.*
+      val env = os.read(dotEnvSource().path)
+      val envsMap: Map[String, String] = env.lines().iterator().asScala
+        .filterNot(l => l.isBlank || l.trim.startsWith("#"))
+        .flatMap(l =>
+          val line = l.split("#").head // without end line comment
+          val parts = line.split("=", 2)
+          Map(parts(0) -> (if parts(1).length > 1 then parts(1).trim else ""))
+        )
+        .toMap
+        .filterNot(v => v._2.isEmpty || v._2 == "\"\"") // striping non set values
+      envsMap
+    }
+
+    private def dotEnvSource = Task.Source(Task.ctx().workspace / ".env")
 
 
     object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
