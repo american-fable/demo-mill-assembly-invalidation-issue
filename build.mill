@@ -67,9 +67,8 @@ object app extends BaseScalaJSModule {
 
     def staticFiles = Task.Sources(Seq(
       ".env",
-      "index.html",
       "index.css",
-      ".postcssrc.json",
+      "index.html",
     ).map(last => app.moduleDir / last)*)
 
     def assembly = Task {
