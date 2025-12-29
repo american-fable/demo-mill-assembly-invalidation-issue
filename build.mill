@@ -20,7 +20,7 @@ object worker extends BaseScalaJSModule {
 
    object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
     override def scalablyTypedBasePath = app.npmInstallPath // it expecting that all npm files already there
-    override def scalablyTypedPackageJson = Task.Source(app.npmInstallPath / "package.json")
+    override def scalablyTypedPackageJson = Task.Source(app.moduleDir / "package.json")
     override def scalablyTypedFlavour = Flavour.Slinky
   }
 }
@@ -34,8 +34,10 @@ object app extends BaseScalaJSModule {
 
     // hardcoded path where all npm files should be installed for ScalablyTyped compilation
     val npmInstallPath = BuildCtx.workspaceRoot / "out" / "app" / "npmInstallDest"
+    def packageJson = Task.Source(app.moduleDir / "package.json")
 
     def npmInstall() = Task.Command{
+      packageJson
       os.makeDir.all(npmInstallPath)
       Seq("package.json", "package-lock.json")
         .map(last => moduleDir / last )
@@ -43,7 +45,7 @@ object app extends BaseScalaJSModule {
 
       os.proc("npm", "install", "--prefix", npmInstallPath)
         .call(cwd = npmInstallPath, env = Map("NODE_ENV" -> "development"))
-    }  
+    }
 
     def assemblyFe = Task {
       assembly() // rename according to README 
@@ -67,10 +69,4 @@ object app extends BaseScalaJSModule {
       assemblyFe()
     }
 
-
-    object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
-      override def scalablyTypedBasePath = npmInstallPath // it expecting that all npm files already there
-      override def scalablyTypedPackageJson = Task.Source(npmInstallPath / "package.json")
-      override def scalablyTypedFlavour = Flavour.Slinky
-    }
 }
