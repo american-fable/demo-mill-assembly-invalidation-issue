@@ -17,6 +17,8 @@ trait BaseScalaJSModule extends ScalaJSModule {
 object shared extends BaseScalaJSModule {
   override def moduleDeps = Seq(scalablyTyped)
 
+  val outPath = "hello"
+
   // hardcoded path where all npm files should be installed for ScalablyTyped compilation
   val npmInstallPath = BuildCtx.workspaceRoot / "out" / "shared" / "npmInstallDest"
   def packageJson = Task.Source(app.moduleDir / "package.json")
@@ -39,14 +41,11 @@ object shared extends BaseScalaJSModule {
 
 object app extends BaseScalaJSModule {
   def assembly = Task { // rename according to README
-    Task.log.info("test log line") // change me to invaldiate
+    Task.log.info("test log line 7") // change me to invaldiate
     val scalaJsOutput = shared.fastLinkJS()
 
-    BuildCtx.withFilesystemCheckerDisabled {
-      // This (inside withFilesystemCheckerDisabled) is required to reproduce the problem. Leaving this block empty or
-      // calling println is not enough
-      os.list(shared.npmInstallPath)
-    }
+    // This reference to a field on `shared` is necessary to reproduce the problem
+    println(shared.outPath)
 
     PathRef(Task.dest)
   }

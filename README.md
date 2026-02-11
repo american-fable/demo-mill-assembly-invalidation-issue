@@ -18,7 +18,7 @@ Install npm dependencies.
 Run the command twice and verify that the second time it runs fast and rebuilds nothing
 
 ``` bash
-time (./mill app.assembly && cat out/mill-invalidation-tree.json)
+time ./mill app.assembly && cat out/mill-invalidation-tree.json
 ```
 
 The second time should look like this: 
