@@ -12,13 +12,13 @@ nix develop
 Install npm dependencies.
 
 ``` sh
-./mill shared.npmInstall
+npm install
 ```
 
 Run the command twice and verify that the second time it runs fast and rebuilds nothing
 
 ``` bash
-time ./mill app.assembly && cat out/mill-invalidation-tree.json
+time (./mill app.assembly && cat out/mill-invalidation-tree.json)
 ```
 
 The second time should look like this: 
@@ -198,9 +198,10 @@ real	0m21.935s
 user	0m0.503s
 sys	0m0.346s
 ```
+There are two ways to fix this issue:
 
-If you rename 'assembly' to 'assemblyX' and chanage the build command to build it, many fewer things
-will be rebuilt:
+1. If you rename 'assembly' to 'assemblyX' and change the build command to build it, many fewer things
+will be rebuilt when editing the log line in app.assemblyX:
 
 ```
 [162/162] ============================== app.assemblyX ============================== 4s
@@ -216,3 +217,6 @@ real	0m4.527s
 user	0m0.325s
 sys	0m0.155s
 ```
+
+2. Comment out `println(shared.outPath)` in app.assembly. Do this, rebuild, tweak the log line, rebuild again and you 
+should get a fast rebuild

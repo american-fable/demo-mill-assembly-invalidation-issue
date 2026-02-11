@@ -19,33 +19,17 @@ object shared extends BaseScalaJSModule {
 
   val outPath = "hello"
 
-  // hardcoded path where all npm files should be installed for ScalablyTyped compilation
-  val npmInstallPath = BuildCtx.workspaceRoot / "out" / "shared" / "npmInstallDest"
-  def packageJson = Task.Source(app.moduleDir / "package.json")
-
-  def npmInstall() = Task.Command {
-    os.makeDir.all(npmInstallPath)
-    Seq("package.json", "package-lock.json")
-      .map(last => moduleDir / last)
-      .foreach(src => os.copy(src, npmInstallPath / src.last, replaceExisting = true))
-
-    os.proc("npm", "install", "--prefix", npmInstallPath)
-      .call(cwd = npmInstallPath, env = Map("NODE_ENV" -> "development"))
-  }
-
   object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
-    override def scalablyTypedBasePath = npmInstallPath // it expecting that all npm files already there
-    override def scalablyTypedPackageJson = Task.Source(shared.moduleDir / "package.json")
   }
 }
 
 object app extends BaseScalaJSModule {
   def assembly = Task { // rename according to README
-    Task.log.info("test log line 7") // change me to invaldiate
+    Task.log.info("test log line") // change me to invalidate the build
     val scalaJsOutput = shared.fastLinkJS()
 
     // This reference to a field on `shared` is necessary to reproduce the problem
-    println(shared.outPath)
+//    println(shared.outPath)
 
     PathRef(Task.dest)
   }
