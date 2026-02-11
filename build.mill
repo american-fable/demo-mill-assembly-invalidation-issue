@@ -17,7 +17,7 @@ trait BaseScalaJSModule extends ScalaJSModule {
 object shared extends BaseScalaJSModule {
   override def moduleDeps = Seq(scalablyTyped)
 
-  val outPath = "hello"
+  val hello = "hello"
 
   object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
   }
@@ -29,7 +29,7 @@ object app extends BaseScalaJSModule {
     val scalaJsOutput = shared.fastLinkJS()
 
     // This reference to a field on `shared` is necessary to reproduce the problem
-//    println(shared.outPath)
+    println(shared.hello)
 
     PathRef(Task.dest)
   }

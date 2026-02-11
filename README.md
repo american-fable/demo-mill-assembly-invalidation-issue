@@ -218,5 +218,5 @@ user	0m0.325s
 sys	0m0.155s
 ```
 
-2. Comment out `println(shared.outPath)` in app.assembly. Do this, rebuild, tweak the log line, rebuild again and you 
+2. Comment out `println(shared.hello)` in app.assembly. Do this, rebuild, tweak the log line, rebuild again and you 
 should get a fast rebuild
