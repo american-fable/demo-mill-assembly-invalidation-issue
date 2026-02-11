@@ -36,7 +36,7 @@ command again. When the task is called assembly, many things are rebuilt, includ
 scalablytyped:
 
 ```
-[162/162] ============================== app.persistentAssembly ============================== 23s
+[162/162] ============================== app.persistentAssembly ============================== 21s
 {
   "shared.scalablyTyped.zincAuxiliaryClassFileExtensions": {},
   "shared.scalablyTyped.scalablyTypedWantedLibs": {},
@@ -195,9 +195,9 @@ scalablytyped:
   "shared.scalablyTyped.localRunClasspath.super.RunModule": {},
   "shared.jsEnvConfig": {}
 }
-real	0m23.823s
-user	0m0.531s
-sys	0m0.419s
+real	0m21.935s
+user	0m0.503s
+sys	0m0.346s
 ```
 
 If you rename 'assembly' to 'assemblyX' and update assemblyFe to call it, many fewer things
