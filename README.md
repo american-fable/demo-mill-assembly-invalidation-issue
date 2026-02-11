@@ -18,13 +18,13 @@ Install npm dependencies.
 Run the command twice and verify that the second time it runs fast and rebuilds nothing
 
 ``` bash
-time (./mill app.persistentAssembly && cat out/mill-invalidation-tree.json)
+time (./mill app.assembly && cat out/mill-invalidation-tree.json)
 ```
 
 The second time should look like this: 
 
 ```
-[162/162] ============================== app.persistentAssembly ==============================
+[162/162] ============================== app.assembly ==============================
 {}
 real    0m0.241s
 user    0m0.173s
@@ -32,11 +32,10 @@ sys     0m0.057s
 ```
 
 Now change the test log line in app.assembly in build.mill and run the
-command again. When the task is called assembly, many things are rebuilt, including 
-scalablytyped:
+command again. Many things will be rebuilt, including scalablytyped:
 
 ```
-[162/162] ============================== app.persistentAssembly ============================== 21s
+[162/162] ============================== app.assembly ============================== 21s
 {
   "shared.scalablyTyped.zincAuxiliaryClassFileExtensions": {},
   "shared.scalablyTyped.scalablyTypedWantedLibs": {},
@@ -200,11 +199,11 @@ user	0m0.503s
 sys	0m0.346s
 ```
 
-If you rename 'assembly' to 'assemblyX' and update assemblyFe to call it, many fewer things
+If you rename 'assembly' to 'assemblyX' and chanage the build command to build it, many fewer things
 will be rebuilt:
 
 ```
-[162/162] ============================== app.persistentAssembly ============================== 4s
+[162/162] ============================== app.assemblyX ============================== 4s
 {
   "mill.javalib.JvmWorkerModule.internalWorker": {},
   "mill.javalib.classgraph.ClassgraphWorkerModule.classgraphWorker": {},

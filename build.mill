@@ -22,7 +22,6 @@ object shared extends BaseScalaJSModule {
   def packageJson = Task.Source(app.moduleDir / "package.json")
 
   def npmInstall() = Task.Command {
-    packageJson
     os.makeDir.all(npmInstallPath)
     Seq("package.json", "package-lock.json")
       .map(last => moduleDir / last)
@@ -35,36 +34,20 @@ object shared extends BaseScalaJSModule {
   object scalablyTyped extends BaseScalaJSModule with ScalablyTyped {
     override def scalablyTypedBasePath = npmInstallPath // it expecting that all npm files already there
     override def scalablyTypedPackageJson = Task.Source(shared.moduleDir / "package.json")
-    override def scalablyTypedFlavour = Flavour.Slinky
   }
 }
 
 object app extends BaseScalaJSModule {
-  override def mvnDeps = Seq(
-    mvn"org.scala-lang:scala3-library_3:${scalaVersion()}".forceVersion(), // to address https://github.com/scala/scala3/issues/22890
-    mvn"me.shadaj::slinky-core::0.7.5",
-    mvn"me.shadaj::slinky-web::0.7.5"
-  )
-
-  def assemblyFe = Task {
-    assembly() // rename according to README
-  }
-
   def assembly = Task { // rename according to README
     Task.log.info("test log line") // change me to invaldiate
     val scalaJsOutput = shared.fastLinkJS()
-    os.copy(scalaJsOutput.dest.path / "main.js", Task.dest / "main.js")
 
-    // for some reason this critical to reproduce the issue, in particular
-    // 'npmInstallPath' usage.
     BuildCtx.withFilesystemCheckerDisabled {
+      // This (inside withFilesystemCheckerDisabled) is required to reproduce the problem. Leaving this block empty or
+      // calling println is not enough
       os.list(shared.npmInstallPath)
     }
 
     PathRef(Task.dest)
-  }
-
-  def persistentAssembly = Task(persistent = true) {
-    assemblyFe()
   }
 }
